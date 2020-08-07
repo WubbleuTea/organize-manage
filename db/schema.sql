@@ -1,9 +1,13 @@
-CREATE TABLE department (
+DROP TABLE IF EXISTS departments;
+DROP TABLE IF EXISTS roles;
+DROP TABLE IF EXISTS employees;
+
+CREATE TABLE departments (
     id INTEGER PRIMARY KEY NOT NULL,
     name VARCHAR(30) NOT NULL
 );
 
-CREATE TABLE role (
+CREATE TABLE roles (
     id INTEGER PRIMARY KEY NOT NULL
     title VARCHAR(30) NOT NULL,
     salary DECIMAL() NOT NULL,
@@ -11,7 +15,7 @@ CREATE TABLE role (
         REFERENCES department(id)
 );
 
-CREATE TABLE employee (
+CREATE TABLE employees (
     id INTEGER PRIMARY KEY NOT NULL,
     first_name VARCHAR(30) NOT NULL,
     last_name VARCHAR(30) NOT NULL,
