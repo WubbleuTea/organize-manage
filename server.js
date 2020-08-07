@@ -27,20 +27,23 @@ const listQuestions = () => {
     inquirer.prompt(openingQuestion)
     .then(function(answer) {
         if (answer == 'view all departments') {
-            viewAllDepartments();
+            viewAll('departments');
         }
        
     });
 };
 
 // Departments are shown
-const viewAllDepartments = () => {
+const viewAll = (type) => {
     connection.query(
-        'SELECT * FROM `departments`',
+        'SELECT * FROM ?',
+        {
+            type
+        },
         function(err, results) {
           if (err) throw err;
           console.table(results); 
-          listQuestions()
+          listQuestions();
         }
       );
 }
