@@ -36,7 +36,7 @@ listQuestions = () => {
         } else if (choice === 'Add a Department') {
             addToTable(addDept, 'departments');
         } else if (choice === 'Add a Role') {
-            addToTable(addRole, 'roles');
+            addToTable(addRole);
         } else if (choice === 'Add an Employee') {
             addToTable(addEmployee, 'employees');
         } else if (choice === 'Update an Employee Role') {
@@ -61,23 +61,32 @@ viewAllDept = () => {
 
 viewAllRoles = () => {
     connection.query(
-        `SELECT * 
+        `SELECT roles.id, title, salary, department_name  
         FROM roles
         LEFT JOIN departments
-        ON roles.department_id = departments(id)`,
+        ON roles.department_id = departments.id`,
         function(err, results) {
-          if (err) throw err;
+          if (err) throw err.message;
           console.table(results); 
           listQuestions();
         }
     );
 };
+
 
 viewAllEmployees = () => {
     connection.query(
-        `SELECT * FROM employees
-        LEFT JOIN roles
-        ON employees.role_id = roles(id)`,
+        `SELECT e.id, e.first_name, e.last_name, 
+                r.title, d.department_name AS department, r.salary, 
+                CONCAT(m.last_name, ', ', m.first_name) AS manager
+            FROM employees AS e 
+            INNER JOIN roles AS r
+            ON e.role_id = r.id
+            LEFT JOIN employees AS m
+            ON e.manager_id = m.id
+            INNER JOIN departments AS d
+            ON r.department_id = d.id
+            ORDER BY e.id;`,
         function(err, results) {
           if (err) throw err;
           console.table(results); 
@@ -86,7 +95,7 @@ viewAllEmployees = () => {
     );
 };
 
-addToTable = (question, table) => {
+addToTable = (question) => {
     inquirer.prompt(question)
     .then(response => {
         if (question[0].name === 'addDepart') {
