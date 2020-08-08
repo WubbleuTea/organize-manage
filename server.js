@@ -8,7 +8,7 @@ const connection = mysql.createConnection({
     port: 3306,
     user: 'root',
     password: 'f1oK69w%C#MsaVyzJx$',
-    database: 'teamDB'
+    database: 'team_db'
 });
 // connects to mysql and begins the program.
 connection.connect(err => {
@@ -28,11 +28,11 @@ listQuestions = () => {
         let choice = answer.firstQuestion
         console.log(`this is the answer ${choice}`)
         if (choice === 'View All Departments') {
-            viewAll('departments');
+            viewAllDept();
         } else if (choice === 'View All Roles') {
-            viewAll('roles');
+            viewAllRoles();
         } else if (choice === 'View All Employees') {
-            viewAll('employees');
+            viewAllEmployees();
         } else if (choice === 'Add a Department') {
             addToTable(addDept, 'departments');
         } else if (choice === 'Add a Role') {
@@ -48,16 +48,42 @@ listQuestions = () => {
 };
 
 // Need joins and possibly need different functions for each group.
-viewAll = type => {
-    console.log(`this is the type ${type}`)
+viewAllDept = () => {
     connection.query(
-        `SELECT * FROM ${type}`,
+        `SELECT * FROM departments`,
         function(err, results) {
           if (err) throw err;
           console.table(results); 
           listQuestions();
         }
-      );
+    );
+};
+
+viewAllRoles = () => {
+    connection.query(
+        `SELECT * 
+        FROM roles
+        LEFT JOIN departments
+        ON roles.department_id = departments(id)`,
+        function(err, results) {
+          if (err) throw err;
+          console.table(results); 
+          listQuestions();
+        }
+    );
+};
+
+viewAllEmployees = () => {
+    connection.query(
+        `SELECT * FROM employees
+        LEFT JOIN roles
+        ON employees.role_id = roles(id)`,
+        function(err, results) {
+          if (err) throw err;
+          console.table(results); 
+          listQuestions();
+        }
+    );
 };
 
 addToTable = (question, table) => {
