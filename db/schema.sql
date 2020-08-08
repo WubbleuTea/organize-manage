@@ -1,8 +1,6 @@
-DROP DATABASE IF EXISTS teamDB;
-
-CREATE DATABASE teamDB;
-
-USE teamDB;
+DROP DATABASE IF EXISTS team_db;
+CREATE DATABASE team_db;
+USE team_db;
 
 DROP TABLE IF EXISTS departments;
 DROP TABLE IF EXISTS roles;
@@ -31,6 +29,7 @@ CREATE TABLE employees (
     role_id INT NOT NULL,
     FOREIGN KEY (role_id)
         REFERENCES roles(id),
-    manager_id INTEGER,
+    manager_id INTEGER 
+        REFERENCES employees(id),
     PRIMARY KEY(id)
 );
