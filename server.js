@@ -39,13 +39,15 @@ listQuestions = () => {
             addToTable(addRole, 'roles');
         } else if (choice === 'Add an Employee') {
             addToTable(addEmployee, 'employees');
+        } else if (choice === 'Update an Employee Role') {
+            updateRoleFunct(updateRole);
         } else {
             connection.end();
         }
     });
 };
 
-// Need joins and possibly needed different 
+// Need joins and possibly need different functions for each group.
 viewAll = type => {
     console.log(`this is the type ${type}`)
     connection.query(
@@ -56,7 +58,7 @@ viewAll = type => {
           listQuestions();
         }
       );
-}
+};
 
 addToTable = (question, table) => {
     inquirer.prompt(question)
@@ -106,4 +108,25 @@ addToTable = (question, table) => {
             );
         }
     })
-}
+};
+
+updateRoleFunct = (question) => {
+    inquirer.prompt(question)
+    .then(response => {
+            connection.query(
+                //need a function to map through the employees to grab their id
+                'INSERT INTO employees WHERE id= ? SET ?',
+                {
+                    //need a function to map through the table and grab the id
+                    id: response.id,
+                    // need a function to map through the roles and grab the id of the matching one.
+                    role_id: response.role
+                },
+                function(err, res) {
+                    if (err) throw err;
+                    console.log(res.affectedRows + ' updated!\n');
+                    listQuestions();
+                }
+            );
+    });
+};
