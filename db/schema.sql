@@ -29,7 +29,7 @@ CREATE TABLE employees (
     role_id INT NOT NULL,
     FOREIGN KEY (role_id)
         REFERENCES roles(id),
-    manager_id INTEGER 
+    manager_id INT 
         REFERENCES employees(id),
     PRIMARY KEY(id)
 );
