@@ -34,11 +34,11 @@ listQuestions = () => {
         } else if (choice === 'View All Employees') {
             viewAllEmployees();
         } else if (choice === 'Add a Department') {
-            addToTable(addDept, 'departments');
+            addToTable(addDept);
         } else if (choice === 'Add a Role') {
             addToTable(addRole);
         } else if (choice === 'Add an Employee') {
-            addToTable(addEmployee, 'employees');
+            addToTable(addEmployee);
         } else if (choice === 'Update an Employee Role') {
             updateRoleFunct(updateRole);
         } else {
@@ -149,18 +149,17 @@ addToTable = (question) => {
 updateRoleFunct = (question) => {
     inquirer.prompt(question)
     .then(response => {
+        console.log("this is before the connection " + mapThroughEmployees(response.name))
             connection.query(
                 //need a function to map through the employees to grab their id
-                'INSERT INTO employees WHERE ? SET ?',
-                [
-                    {
-                        //need a function to map through the table and grab the id
-                        id: mapThroughEmployees(response.name),
-                    },
-                    {
+                'UPDATE employees SET role_id = ? WHERE id = ?',
+                [ 
+                    
                         // need a function to map through the roles and grab the id of the matching one.
-                        role_id: 4
-                    }
+                        4,
+                        //need a function to map through the table and grab the id
+                        mapThroughEmployees(response.name)
+                    
                 ],
                 function(err, res) {
                     if (err) throw err;
@@ -187,7 +186,7 @@ mapThroughDepartments = (data) => {
             return id;
         }
     );
-}
+};
 
 mapThroughroles = (data) => {
     connection.query(
@@ -201,19 +200,52 @@ mapThroughroles = (data) => {
             }  
         }
     );
-}
+};
 
 mapThroughEmployees = (name) => {
     let nameArr = name.split(' ')
+    let nameId;
     connection.query(
         `SELECT * FROM employees`,
         function(err, results) {
+            console.log("\nhere are the results " + results[0].id)
           if (err) throw err; 
             for (let i = 0; i < results.length; i++) {
                 if (results[i].first_name === nameArr[0] && results[i].last_name === nameArr[1]) {
-                    return results[i].id;
+                    console.log("iteration: " + i + " this should be returned" + parseInt(results[i].id))
+                    nameId = parseInt(results[i].id);
+                    
                 } 
             }  
         }
     );
-}
+    console.log('this is the id ' +nameId)
+    return nameId
+};
+
+// async function mapThroughEmployees() {
+//     let allEmployees = await connection.query(
+//         `SELECT e.id, e.first_name, e.last_name, 
+//                 r.title, d.department_name AS department, r.salary, 
+//                 CONCAT(m.last_name, ', ', m.first_name) AS manager
+//             FROM employees AS e 
+//             INNER JOIN roles AS r
+//             ON e.role_id = r.id
+//             LEFT JOIN employees AS m
+//             ON e.manager_id = m.id
+//             INNER JOIN departments AS d
+//             ON r.department_id = d.id
+//             ORDER BY e.id;`,
+//         function(err, results) {
+//             if (err) throw err;
+//             return results
+//         }
+//     );
+
+//     let employeeChoices = allEmployees.map(({ id, first_name, last_name }) => ({
+//         name: `${first_name} ${last_name}`,
+//         value: id
+//     }))
+// };
+
+console.log("sally joe " + mapThroughEmployees('Sally Joe'));
