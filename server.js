@@ -98,11 +98,12 @@ viewAllEmployees = () => {
 addToTable = (question) => {
     inquirer.prompt(question)
     .then(response => {
+        console.log(response)
         if (question[0].name === 'addDepart') {
             connection.query(
                 'INSERT INTO departments SET ?',
                 {
-                    department_name: response.addDepart
+                    department_name: response.name
                 },
                 function(err, res) {
                     if (err) throw err;
@@ -111,13 +112,13 @@ addToTable = (question) => {
                 }
             );
         } else if (question[0].name === 'name') {
-            connection.query(
+            connection.promise.query(
                 'INSERT INTO roles SET ?',
                 {
-                    title: response.addDepart,
+                    title: response.name,
                     salary: response.salary,
                     //this will need to be a function to get the id
-                    department_id: response.depart
+                    department_id: mapThroughDepartments(response.depart)
                 },
                 function(err, res) {
                     if (err) throw err;
@@ -132,8 +133,8 @@ addToTable = (question) => {
                     first_name: response.firstName,
                     last_name: response.lastName,
                     //this will need to be a function to get the id for these too.
-                    role_id: response.role,
-                    manager_id: response.manger
+                    role_id: mapThroughRoles(response.role),
+                    manager_id: mapThroughEmployees(response.manger)
                 },
                 function(err, res) {
                     if (err) throw err;
@@ -150,13 +151,17 @@ updateRoleFunct = (question) => {
     .then(response => {
             connection.query(
                 //need a function to map through the employees to grab their id
-                'INSERT INTO employees WHERE id= ? SET ?',
-                {
-                    //need a function to map through the table and grab the id
-                    id: response.id,
-                    // need a function to map through the roles and grab the id of the matching one.
-                    role_id: response.role
-                },
+                'INSERT INTO employees WHERE ? SET ?',
+                [
+                    {
+                        //need a function to map through the table and grab the id
+                        id: mapThroughEmployees(response.name),
+                    },
+                    {
+                        // need a function to map through the roles and grab the id of the matching one.
+                        role_id: 4
+                    }
+                ],
                 function(err, res) {
                     if (err) throw err;
                     console.log(res.affectedRows + ' updated!\n');
@@ -165,3 +170,50 @@ updateRoleFunct = (question) => {
             );
     });
 };
+
+mapThroughDepartments = (data) => {
+    connection.query(
+        `SELECT * FROM departments`,
+        function(err, results) {
+            let id = 1
+          if (err) throw err; 
+            for (let i = 0; i < results.length; i++) {
+                if (data === results[i].id) {
+                return results[i].id;
+                } else {
+                    id += 1
+                }
+            }  
+            return id;
+        }
+    );
+}
+
+mapThroughroles = (data) => {
+    connection.query(
+        `SELECT * FROM roles`,
+        function(err, results) {
+          if (err) throw err; 
+            for (let i = 0; i < results.length; i++) {
+                if (data === results[i].title) {
+                return results[i].id;
+                } 
+            }  
+        }
+    );
+}
+
+mapThroughEmployees = (name) => {
+    let nameArr = name.split(' ')
+    connection.query(
+        `SELECT * FROM employees`,
+        function(err, results) {
+          if (err) throw err; 
+            for (let i = 0; i < results.length; i++) {
+                if (results[i].first_name === nameArr[0] && results[i].last_name === nameArr[1]) {
+                    return results[i].id;
+                } 
+            }  
+        }
+    );
+}
