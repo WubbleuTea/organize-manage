@@ -1,7 +1,7 @@
-const { openingQuestion, addDept, addRole, addEmployee, updateRole } = require('./lib/questions')
 const inquirer = require('inquirer')
 const mysql = require('mysql2');
 const cTable = require('console.table')
+const figlet = require('figlet');
 
 const connection = mysql.createConnection({
     host: 'localhost',
@@ -18,12 +18,34 @@ connection.connect(err => {
 });
 // Creates the image, starts the connection and goes to first list of questions.
 startUp = () => {
-    console.log('Employee Table')
-    listQuestions();
+    figlet('Employee Database', function(err, data) {
+        if (err) {
+            console.log('Something went wrong...');
+            console.dir(err);
+            return;
+        }
+        console.log(data)
+        listQuestions();
+    });
 };
 // list of questions are asked
 listQuestions = () => {
-    inquirer.prompt(openingQuestion)
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'firstQuestion',
+            message: 'What would you like to do?',
+            choices: [
+                'View All Departments', 
+                'View All Roles', 
+                'View All Employees', 
+                'Add a Department', 
+                'Add a Role', 
+                'Add an Employee', 
+                'Update an Employee Role', 
+                'Quit']
+        }
+    ])
     .then(answer => {
         let choice = answer.firstQuestion
         if (choice === 'View All Departments') {
@@ -33,13 +55,13 @@ listQuestions = () => {
         } else if (choice === 'View All Employees') {
             viewAllEmployees();
         } else if (choice === 'Add a Department') {
-            addToDept(addDept);
+            addToDept();
         } else if (choice === 'Add a Role') {
-            addToRole(addRole);
+            addToRole();
         } else if (choice === 'Add an Employee') {
-            addToEmployee(addEmployee);
+            addToEmployee();
         } else if (choice === 'Update an Employee Role') {
-            updateRoleFunct(updateRole);
+            updateRoleFunct();
         } else {
             connection.end();
         }
@@ -94,9 +116,23 @@ viewAllEmployees = () => {
     );
 };
 
-addToDept = (question) => {
+addToDept = () => {
     let deptName;
-    inquirer.prompt(question)
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'addDepart',
+            message: 'What is the name of the department you would like to add?',
+            validate: addDepartInput => {
+                if (addDepartInput) {
+                    return true;
+                } else {
+                    console.log('Please enter your new department!');
+                    return false;
+                }
+            }
+        }
+    ])
     .then(response => {
         deptName = response.addDepart
             connection.query(
@@ -113,12 +149,45 @@ addToDept = (question) => {
     })
 };
 
-addToRole = (question) => {
+addToRole = () => {
     let deptId;
     let roleName;
     let roleSalary
 
-    inquirer.prompt(question)
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'name',
+            message: 'Please enter the name of the new role.',
+            validate: roleNameInput => {
+                if (roleNameInput) {
+                    return true;
+                } else {
+                    console.log('Please enter name of this role!');
+                    return false;
+                }
+            }
+        },
+        {
+            type: 'input',
+            name: 'salary',
+            message: 'What is the salary of this role?',
+            validate: roleSalaryInput => {
+                if (roleSalaryInput) {
+                    return true;
+                } else {
+                    console.log('Please enter salary of this role!');
+                    return false;
+                }
+            }
+        },
+        {
+            type: 'list',
+            name: 'depart',
+            message: 'What is the name of the department for this role?',
+            choices: allDepartments()
+        }
+    ])
     .then(response => {
         roleName = response.name;
         roleSalary = response.salary
@@ -150,7 +219,7 @@ addToRole = (question) => {
     });
 };
 
-addToEmployee = (question) => {
+addToEmployee = () => {
     let roleId;
     let roleName;
     let managerId;
@@ -158,7 +227,46 @@ addToEmployee = (question) => {
     let newLastName;
     let managerArr = [];
 
-    inquirer.prompt(question)
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'firstName',
+            message: 'Please enter the first name of this employee.',
+            validate: firstNameInput => {
+                if (firstNameInput) {
+                    return true;
+                } else {
+                    console.log("Please enter the employee's first name!");
+                    return false;
+                }
+            }
+        },
+        {
+            type: 'input',
+            name: 'lastName',
+            message: 'Please enter the last name of this employee.',
+            validate: lastNameInput => {
+                if (lastNameInput) {
+                    return true;
+                } else {
+                    console.log("Please enter the employee's last name!");
+                    return false;
+                }
+            }
+        },
+        {
+            type: 'list',
+            name: 'role',
+            message: 'Please enter the role of this employee.',
+            choices: allRoleNames()
+        },
+        {
+            type: 'list',
+            name: 'manager',
+            message: 'Please enter the manager of this employee.',
+            choices: allEmployees()
+        }
+    ])
     .then(response => {
         newFirstName = response.firstName;
         newLastName = response.lastName;
@@ -203,10 +311,28 @@ addToEmployee = (question) => {
 
 // 
 
-updateRoleFunct = (question) => {
+updateRoleFunct = () => {
     let nameId;
     let roleId;
-    inquirer.prompt(question).then((response) => {
+    inquirer.prompt([
+        {
+            type: 'input',
+            name: 'comments',
+            message: 'Please add any comments about this role change:'
+        },
+        {
+            type: 'list',
+            name: 'name',
+            message: 'Please enter the name of the employee you would like to change.',
+            choices: allEmployees()
+        },
+        {
+            type: 'list',
+            name: 'role',
+            message: 'Please enter the new role of this employee.',
+            choices: allRoleNames()
+        }
+    ]).then(response => {
       let nameArr = response.name.split(" ");
       let roleName = response.role
         connection.query(`SELECT * FROM employees`, function (err, results) {
@@ -241,7 +367,7 @@ updateRoleFunct = (question) => {
 };
 
 
-allRoleNames = () => {
+function allRoleNames() {
     rolesArr = []
     connection.query(`SELECT * FROM roles`, function(err, results) {
         if (err) throw err; 
@@ -250,6 +376,30 @@ allRoleNames = () => {
         })
     })
     return rolesArr;
+
+}
+
+function allEmployees() {
+    employeeArr = []
+    connection.query(`SELECT * FROM employees`, function(err, results) {
+        if (err) throw err; 
+        results.forEach(employee => {
+            employeeArr.push(`${employee.first_name} ${employee.last_name}`)
+        })
+    })
+    return employeeArr;
+
+}
+
+function allDepartments() {
+    deptArr = []
+    connection.query(`SELECT * FROM departments`, function(err, results) {
+        if (err) throw err; 
+        results.forEach(dept => {
+            deptArr.push(dept.department_name)
+        })
+    })
+    return deptArr;
 
 }
 
