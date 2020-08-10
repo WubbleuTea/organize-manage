@@ -1,4 +1,4 @@
-# Employee Daabase
+# Employee Database
 [![License Badge](https://img.shields.io/badge/license-None-red)](#)
 
 ## Description  
@@ -28,13 +28,13 @@ To start open up the terminal and run :
 ```npm start```
 
 Displays a quality employee page (this is a static image).  
-![Displays a quality employee page.](/assets/images/completed-page.PNG)  
+![Displays a quality employee page.](/public/assets/images/opening-page.PNG)  
 
 Video Demo Youtube (if viewing online, the image is a link)   
-[![Video Demo: Youtube](/assets/images/youtube.png)](https://www.youtube.com/watch?v=LjcwEa7bCyg&feature=youtu.be)  
+[![Video Demo: Youtube](/assets/images/youtube.png)](https://www.youtube.com/watch?v=3mqfIw-3YS4)  
 
 Video Demo File (if viewing from desktop with cloned repo, the image is a link)   
-[![Video Demo: File](/assets/images/image-video-demo-file.png)](/assets/video/demo.mp4)  
+[![Video Demo: File](/assets/images/image-video-demo-file.png)](/public/assets/video/demo.mp4)  
 
 ## Licensing  
 None  
