@@ -26,7 +26,6 @@ listQuestions = () => {
     inquirer.prompt(openingQuestion)
     .then(answer => {
         let choice = answer.firstQuestion
-        console.log(`this is the answer ${choice}`)
         if (choice === 'View All Departments') {
             viewAllDept();
         } else if (choice === 'View All Roles') {
@@ -34,11 +33,11 @@ listQuestions = () => {
         } else if (choice === 'View All Employees') {
             viewAllEmployees();
         } else if (choice === 'Add a Department') {
-            addToTable(addDept);
+            addToDept(addDept);
         } else if (choice === 'Add a Role') {
-            addToTable(addRole);
+            addToRole(addRole);
         } else if (choice === 'Add an Employee') {
-            addToTable(addEmployee);
+            addToEmployee(addEmployee);
         } else if (choice === 'Update an Employee Role') {
             updateRoleFunct(updateRole);
         } else {
@@ -95,157 +94,163 @@ viewAllEmployees = () => {
     );
 };
 
-addToTable = (question) => {
+addToDept = (question) => {
+    let deptName;
     inquirer.prompt(question)
     .then(response => {
-        console.log(response)
-        if (question[0].name === 'addDepart') {
+        deptName = response.addDepart
             connection.query(
-                'INSERT INTO departments SET ?',
-                {
-                    department_name: response.name
-                },
-                function(err, res) {
-                    if (err) throw err;
-                    console.log(res.affectedRows + ' added!\n');
-                    listQuestions();
-                }
-            );
-        } else if (question[0].name === 'name') {
-            connection.promise.query(
-                'INSERT INTO roles SET ?',
-                {
-                    title: response.name,
-                    salary: response.salary,
-                    //this will need to be a function to get the id
-                    department_id: mapThroughDepartments(response.depart)
-                },
-                function(err, res) {
-                    if (err) throw err;
-                    console.log(res.affectedRows + ' added!\n');
-                    listQuestions();
-                }
-            );
-        } else if (question[0].name === 'firstName') {
-            connection.query(
-                'INSERT INTO employees SET ?',
-                {
-                    first_name: response.firstName,
-                    last_name: response.lastName,
-                    //this will need to be a function to get the id for these too.
-                    role_id: mapThroughRoles(response.role),
-                    manager_id: mapThroughEmployees(response.manger)
-                },
-                function(err, res) {
-                    if (err) throw err;
-                    console.log(res.affectedRows + ' added!\n');
-                    listQuestions();
-                }
-            );
-        }
-    })
-};
-
-updateRoleFunct = (question) => {
-    inquirer.prompt(question)
-    .then(response => {
-        console.log("this is before the connection " + mapThroughEmployees(response.name))
-            connection.query(
-                //need a function to map through the employees to grab their id
-                'UPDATE employees SET role_id = ? WHERE id = ?',
-                [ 
-                    
-                        // need a function to map through the roles and grab the id of the matching one.
-                        4,
-                        //need a function to map through the table and grab the id
-                        mapThroughEmployees(response.name)
-                    
+                'INSERT INTO departments SET department_name = ?',
+                [
+                    deptName
                 ],
                 function(err, res) {
                     if (err) throw err;
-                    console.log(res.affectedRows + ' updated!\n');
+                    console.log(res.affectedRows + ' added!\n');
                     listQuestions();
                 }
             );
+    })
+};
+
+addToRole = (question) => {
+    let deptId;
+    let roleName;
+    let roleSalary
+
+    inquirer.prompt(question)
+    .then(response => {
+        roleName = response.name;
+        roleSalary = response.salary
+        connection.query(
+                `SELECT * FROM departments`,
+                function(err, results) {
+                  if (err) throw err; 
+                    for (let i = 0; i < results.length; i++) {
+                        if (response.depart === results[i].department_name) {
+                            deptId = results[i].id;
+                            connection.query(
+                                `INSERT INTO roles (title, salary, department_id)
+                                VALUES (?,?,?)`,
+                                [
+                                    roleName,
+                                    roleSalary,
+                                    deptId
+                                ],
+                                function(err, res) {
+                                    if (err) throw err;
+                                    console.log(res.affectedRows + ' added!\n');
+                                    listQuestions();
+                                }
+                            );
+                        }
+                    }
+                }
+        );
     });
 };
 
-mapThroughDepartments = (data) => {
-    connection.query(
-        `SELECT * FROM departments`,
-        function(err, results) {
-            let id = 1
-          if (err) throw err; 
+addToEmployee = (question) => {
+    let roleId;
+    let roleName;
+    let managerId;
+    let newFirstName;
+    let newLastName;
+    let managerArr = [];
+
+    inquirer.prompt(question)
+    .then(response => {
+        newFirstName = response.firstName;
+        newLastName = response.lastName;
+        managerArr = response.manager.split(' ');
+        roleName = response.role;
+        connection.query(`SELECT * FROM employees`, function (err, results) {
+            if (err) throw err;
+
             for (let i = 0; i < results.length; i++) {
-                if (data === results[i].id) {
-                return results[i].id;
-                } else {
-                    id += 1
-                }
-            }  
-            return id;
-        }
-    );
+                if (results[i].first_name === managerArr[0] && results[i].last_name === managerArr[1]) {
+                    managerId = parseInt(results[i].id);
+
+                    connection.query(`SELECT * FROM roles`, function(err, results) {
+                        if (err) throw err; 
+                        for (let i = 0; i < results.length; i++) {
+                            if (roleName === results[i].title) {
+                                roleId = results[i].id;
+
+                                connection.query(
+                                    `INSERT INTO employees (first_name, last_name, role_id,  manager_id)
+                                    VALUES (?,?,?,?)`,
+                                    [
+                                        newFirstName,
+                                        newLastName,
+                                        roleId,
+                                        managerId
+                                    ],
+                                    function(err, res) {
+                                        if (err) throw err;
+                                        console.log(res.affectedRows + ' added!\n');
+                                        listQuestions();
+                                    }
+                                );
+                            }
+                        }    
+                    });    
+                };
+            }
+        });
+    });
 };
 
-mapThroughroles = (data) => {
-    connection.query(
-        `SELECT * FROM roles`,
-        function(err, results) {
-          if (err) throw err; 
-            for (let i = 0; i < results.length; i++) {
-                if (data === results[i].title) {
-                return results[i].id;
-                } 
-            }  
-        }
-    );
-};
+// 
 
-mapThroughEmployees = (name) => {
-    let nameArr = name.split(' ')
+updateRoleFunct = (question) => {
     let nameId;
-    connection.query(
-        `SELECT * FROM employees`,
-        function(err, results) {
-            console.log("\nhere are the results " + results[0].id)
-          if (err) throw err; 
+    let roleId;
+    inquirer.prompt(question).then((response) => {
+      let nameArr = response.name.split(" ");
+      let roleName = response.role
+        connection.query(`SELECT * FROM employees`, function (err, results) {
+            if (err) throw err;
             for (let i = 0; i < results.length; i++) {
                 if (results[i].first_name === nameArr[0] && results[i].last_name === nameArr[1]) {
-                    console.log("iteration: " + i + " this should be returned" + parseInt(results[i].id))
                     nameId = parseInt(results[i].id);
-                    
-                } 
-            }  
-        }
-    );
-    console.log('this is the id ' +nameId)
-    return nameId
+                    connection.query(`SELECT * FROM roles`, function(err, results) {
+                        if (err) throw err; 
+                        for (let i = 0; i < results.length; i++) {
+                            if (roleName === results[i].title) {
+                                roleId = results[i].id;
+                                connection.query(
+                                    `UPDATE employees SET role_id = ? WHERE id = ?`,
+                                    [
+                                    roleId,
+                                    nameId
+                                    ],
+                                    function (err, res) {
+                                    if (err) throw err;
+                                    console.log(res.affectedRows + " updated!\n");
+                                    listQuestions();
+                                    }
+                                );
+                            } 
+                        }  
+                    })
+                }
+            }
+        });
+    });
 };
 
-// async function mapThroughEmployees() {
-//     let allEmployees = await connection.query(
-//         `SELECT e.id, e.first_name, e.last_name, 
-//                 r.title, d.department_name AS department, r.salary, 
-//                 CONCAT(m.last_name, ', ', m.first_name) AS manager
-//             FROM employees AS e 
-//             INNER JOIN roles AS r
-//             ON e.role_id = r.id
-//             LEFT JOIN employees AS m
-//             ON e.manager_id = m.id
-//             INNER JOIN departments AS d
-//             ON r.department_id = d.id
-//             ORDER BY e.id;`,
-//         function(err, results) {
-//             if (err) throw err;
-//             return results
-//         }
-//     );
 
-//     let employeeChoices = allEmployees.map(({ id, first_name, last_name }) => ({
-//         name: `${first_name} ${last_name}`,
-//         value: id
-//     }))
-// };
+allRoleNames = () => {
+    rolesArr = []
+    connection.query(`SELECT * FROM roles`, function(err, results) {
+        if (err) throw err; 
+        results.forEach(role => {
+            rolesArr.push(role.title)
+        })
+    })
+    return rolesArr;
 
-console.log("sally joe " + mapThroughEmployees('Sally Joe'));
+}
+
+module.exports = allRoleNames 
