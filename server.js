@@ -47,28 +47,34 @@ listQuestions = () => {
         }
     ])
     .then(answer => {
-        let choice = answer.firstQuestion
-        if (choice === 'View All Departments') {
-            viewAllDept();
-        } else if (choice === 'View All Roles') {
-            viewAllRoles();
-        } else if (choice === 'View All Employees') {
-            viewAllEmployees();
-        } else if (choice === 'Add a Department') {
-            addToDept();
-        } else if (choice === 'Add a Role') {
-            addToRole();
-        } else if (choice === 'Add an Employee') {
-            addToEmployee();
-        } else if (choice === 'Update an Employee Role') {
-            updateRoleFunct();
-        } else {
-            connection.end();
+        switch (answer.firstQuestion) {
+            case 'View All Departments':
+                viewAllDept();
+                break;
+            case 'View All Roles':
+                viewAllRoles();
+                break
+            case 'View All Employees':
+                viewAllEmployees();
+                break;
+            case 'Add a Department':
+                addToDept();
+                break;
+            case 'Add a Role':
+                addToRole();
+                break;
+            case 'Add an Employee':
+                addToEmployee();
+                break;
+            case 'Update an Employee Role':
+                updateRoleFunct();
+            default:
+                connection.end();
         }
     });
 };
 
-// Need joins and possibly need different functions for each group.
+// View all departments
 viewAllDept = () => {
     connection.query(
         `SELECT * FROM departments`,
@@ -80,6 +86,7 @@ viewAllDept = () => {
     );
 };
 
+// View all roles
 viewAllRoles = () => {
     connection.query(
         `SELECT roles.id, title, salary, department_name  
@@ -94,7 +101,7 @@ viewAllRoles = () => {
     );
 };
 
-
+// View All Employees
 viewAllEmployees = () => {
     connection.query(
         `SELECT e.id, e.first_name, e.last_name, 
@@ -116,6 +123,7 @@ viewAllEmployees = () => {
     );
 };
 
+// adding a department to the table
 addToDept = () => {
     let deptName;
     inquirer.prompt([
@@ -133,6 +141,7 @@ addToDept = () => {
             }
         }
     ])
+    // store input as the new department name in the table
     .then(response => {
         deptName = response.addDepart
             connection.query(
@@ -149,11 +158,10 @@ addToDept = () => {
     })
 };
 
-addToRole = () => {
+// add a new role
+async function addToRole() {
     let deptId;
-    let roleName;
-    let roleSalary
-
+    let departments = await allDepartments()
     inquirer.prompt([
         {
             type: 'input',
@@ -185,12 +193,10 @@ addToRole = () => {
             type: 'list',
             name: 'depart',
             message: 'What is the name of the department for this role?',
-            choices: allDepartments()
+            choices: departments
         }
     ])
     .then(response => {
-        roleName = response.name;
-        roleSalary = response.salary
         connection.query(
                 `SELECT * FROM departments`,
                 function(err, results) {
@@ -202,8 +208,8 @@ addToRole = () => {
                                 `INSERT INTO roles (title, salary, department_id)
                                 VALUES (?,?,?)`,
                                 [
-                                    roleName,
-                                    roleSalary,
+                                    response.name,
+                                    response.salary,
                                     deptId
                                 ],
                                 function(err, res) {
@@ -219,13 +225,12 @@ addToRole = () => {
     });
 };
 
-addToEmployee = () => {
+async function addToEmployee() {
     let roleId;
-    let roleName;
     let managerId;
-    let newFirstName;
-    let newLastName;
     let managerArr = [];
+    let employees = await allEmployees()
+    let roles = await allRoleNames()
 
     inquirer.prompt([
         {
@@ -258,39 +263,35 @@ addToEmployee = () => {
             type: 'list',
             name: 'role',
             message: 'Please enter the role of this employee.',
-            choices: allRoleNames()
+            choices: roles
         },
         {
             type: 'list',
             name: 'manager',
             message: 'Please enter the manager of this employee.',
-            choices: allEmployees()
+            choices: employees
         }
     ])
     .then(response => {
-        newFirstName = response.firstName;
-        newLastName = response.lastName;
-        managerArr = response.manager.split(' ');
-        roleName = response.role;
-        connection.query(`SELECT * FROM employees`, function (err, results) {
+        const { firstName, lastName, role, manager } = response
+        managerArr = manager.split(' ');
+        // query to find the manager
+        connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+            [managerArr[0], managerArr[1]], function (err, results) {  
             if (err) throw err;
-
-            for (let i = 0; i < results.length; i++) {
-                if (results[i].first_name === managerArr[0] && results[i].last_name === managerArr[1]) {
-                    managerId = parseInt(results[i].id);
-
-                    connection.query(`SELECT * FROM roles`, function(err, results) {
-                        if (err) throw err; 
-                        for (let i = 0; i < results.length; i++) {
-                            if (roleName === results[i].title) {
-                                roleId = results[i].id;
-
+            managerId = results[0].id;
+                    // Query to find the role id
+                    connection.query(`SELECT id FROM roles WHERE title = ?`,
+                        [ role ], function(err, results) {
+                            if (err) throw err; 
+                            roleId = results[0].id;
+                                //Insert Query for the table.
                                 connection.query(
                                     `INSERT INTO employees (first_name, last_name, role_id,  manager_id)
                                     VALUES (?,?,?,?)`,
                                     [
-                                        newFirstName,
-                                        newLastName,
+                                        firstName,
+                                        lastName,
                                         roleId,
                                         managerId
                                     ],
@@ -300,107 +301,99 @@ addToEmployee = () => {
                                         listQuestions();
                                     }
                                 );
-                            }
-                        }    
-                    });    
-                };
+                        }
+                    );    
             }
-        });
+        );
     });
 };
 
 // 
 
-updateRoleFunct = () => {
+async function updateRoleFunct()  {
     let nameId;
     let roleId;
+    let employees = await allEmployees()
+    let roles = await allRoleNames()
+    
     inquirer.prompt([
-        {
-            type: 'input',
-            name: 'comments',
-            message: 'Please add any comments about this role change:'
-        },
         {
             type: 'list',
             name: 'name',
             message: 'Please enter the name of the employee you would like to change.',
-            choices: allEmployees()
+            choices: employees
         },
         {
             type: 'list',
             name: 'role',
             message: 'Please enter the new role of this employee.',
-            choices: allRoleNames()
+            choices: roles
         }
     ]).then(response => {
       let nameArr = response.name.split(" ");
-      let roleName = response.role
-        connection.query(`SELECT * FROM employees`, function (err, results) {
-            if (err) throw err;
-            for (let i = 0; i < results.length; i++) {
-                if (results[i].first_name === nameArr[0] && results[i].last_name === nameArr[1]) {
-                    nameId = parseInt(results[i].id);
-                    connection.query(`SELECT * FROM roles`, function(err, results) {
-                        if (err) throw err; 
-                        for (let i = 0; i < results.length; i++) {
-                            if (roleName === results[i].title) {
-                                roleId = results[i].id;
+        connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+            [nameArr[0], nameArr[1]], function (err, results) {
+                if (err) throw err;
+                nameId = results[0].id;            
+                    connection.query(`SELECT id FROM roles WHERE title = ?`,
+                        [ response.role ], function(err, results) {
+                            if (err) throw err; 
+                            roleId = results[0].id;
                                 connection.query(
                                     `UPDATE employees SET role_id = ? WHERE id = ?`,
                                     [
-                                    roleId,
-                                    nameId
+                                        roleId,
+                                        nameId
                                     ],
                                     function (err, res) {
-                                    if (err) throw err;
-                                    console.log(res.affectedRows + " updated!\n");
-                                    listQuestions();
+                                        if (err) throw err;
+                                        console.log(res.affectedRows + " updated!\n");
+                                        listQuestions();
                                     }
                                 );
-                            } 
-                        }  
-                    })
-                }
+                        } 
+                    );
             }
-        });
+        );
     });
 };
 
 
-function allRoleNames() {
-    rolesArr = []
-    connection.query(`SELECT * FROM roles`, function(err, results) {
-        if (err) throw err; 
-        results.forEach(role => {
-            rolesArr.push(role.title)
+async function allRoleNames() {
+    return new Promise(function (resolve, reject) {
+        rolesArr = []
+        connection.query(`SELECT * FROM roles`, function(err, results) {
+            if (err) reject(err); 
+            results.forEach(role => {
+                rolesArr.push(role.title)
+            })
+            resolve(rolesArr)
         })
     })
-    return rolesArr;
-
 }
 
-function allEmployees() {
-    employeeArr = []
-    connection.query(`SELECT * FROM employees`, function(err, results) {
-        if (err) throw err; 
-        results.forEach(employee => {
-            employeeArr.push(`${employee.first_name} ${employee.last_name}`)
+async function allEmployees() {
+    return new Promise(function (resolve, reject) {
+        employeeArr = []
+        connection.query(`SELECT * FROM employees`, function(err, results) {
+            if (err) reject(err); 
+            results.forEach(employee => {
+                employeeArr.push(`${employee.first_name} ${employee.last_name}`)
+            })
+            resolve(employeeArr);
         })
-    })
-    return employeeArr;
-
-}
+    });
+};
 
 function allDepartments() {
-    deptArr = []
-    connection.query(`SELECT * FROM departments`, function(err, results) {
-        if (err) throw err; 
-        results.forEach(dept => {
-            deptArr.push(dept.department_name)
+    return new Promise(function (resolve, reject) {
+        deptArr = []
+        connection.query(`SELECT * FROM departments`, function(err, results) {
+            if (err) reject(err); 
+            results.forEach(dept => {
+                deptArr.push(dept.department_name)
+            })
+            resolve(deptArr);
         })
-    })
-    return deptArr;
-
-}
-
-module.exports = allRoleNames 
+    });
+};
