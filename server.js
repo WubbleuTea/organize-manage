@@ -508,22 +508,18 @@ async function allDepartments() {
 };
 
 function updateManager(managerId, nameId) {
-    // return new Promise(function (resolve, reject) {
-        connection.query(
-            `UPDATE employees SET manager_id = ? WHERE id = ?`,
-            [
-                managerId,
-                nameId
-            ],
-            function (err, res) {
-                if (err) throw err;
-                // console.log(res.affectedRows + " updated!\n");
-                console.log(managerId, nameId)
-                // Return back to the original set of questions.
-                listQuestions();
-            }
-        )  
-        // resolve()
-    }
-    // )
-// }
+    connection.query(
+        `UPDATE employees SET manager_id = ? WHERE id = ?`,
+        [
+            managerId,
+            nameId
+        ],
+        function (err, res) {
+            if (err) throw err;
+            console.log(res.affectedRows + " updated!\n");
+            console.log(managerId, nameId)
+            // Return back to the original set of questions.
+            listQuestions();
+        }
+    )  
+}
