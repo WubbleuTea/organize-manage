@@ -12,12 +12,14 @@ const connection = mysql.createConnection({
     password: process.env.DB_PW,
     database: process.env.DB_NAME
 });
+
 // connects to mysql and begins the program.
 connection.connect(err => {
     if (err) throw err;
     console.log('connected as id ' + connection.threadId);
     startUp();
 });
+
 // Creates the image, starts the connection and goes to first list of questions.
 startUp = () => {
     figlet('Employee Database', function(err, data) {
@@ -46,7 +48,8 @@ listQuestions = () => {
                 'Add a Department', 
                 'Add a Role', 
                 'Add an Employee', 
-                'Update an Employee Role', 
+                'Update an Employee Role',
+                "Update and Employee's Manager", 
                 'Quit']
         }
     ])
@@ -74,6 +77,9 @@ listQuestions = () => {
             case 'Update an Employee Role':
                 updateRoleFunct();
                 break;
+            case "Update and Employee's Manager":
+                updateEmployeeManager();
+                break;
             default:
                 connection.end();
         }
@@ -94,6 +100,7 @@ viewAllDept = () => {
 
 // View all roles
 viewAllRoles = () => {
+    // joining departments table to roles
     connection.query(
         `SELECT roles.id, title, salary, department_name  
         FROM roles
@@ -131,7 +138,6 @@ viewAllEmployees = () => {
 
 // adding a department to the table
 addToDept = () => {
-    let deptName;
     inquirer.prompt([
         {
             type: 'input',
@@ -147,17 +153,17 @@ addToDept = () => {
             }
         }
     ])
-    // store input as the new department name in the table
+    // Add department to the table
     .then(response => {
-        deptName = response.addDepart
             connection.query(
                 'INSERT INTO departments SET department_name = ?',
                 [
-                    deptName
+                    response.addDepart
                 ],
                 function(err, res) {
                     if (err) throw err;
                     console.log(res.affectedRows + ' added!\n');
+                     // Return back to the original set of questions.
                     listQuestions();
                 }
             );
@@ -339,6 +345,7 @@ async function updateRoleFunct()  {
     let employees = await allEmployees();
     let roles = await allRoleNames();
 
+
     // Asks the question of what to change
     inquirer.prompt([
         {
@@ -351,10 +358,12 @@ async function updateRoleFunct()  {
             type: 'list',
             name: 'role',
             message: 'Please enter the new role of this employee.',
-            choices: roles
+            choices: roles, 
+            when: function(answers) {
+               return (answers.name === 'None') ? false : true; 
+            }
         }
         //find the id of the person that has been requested to update
-        // need to figure out how to not continue asking questions when they say none.
     ]).then(response => {
         if (response.name === 'None') {
             console.log('No employee updated')
@@ -397,6 +406,68 @@ async function updateRoleFunct()  {
 };
 
 
+async function updateEmployeeManager() {
+    let nameId;
+    let managerId;
+    // arrays created for the answer choices
+    let employees = await allEmployees();
+
+    // Asks the question of what to change
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'name',
+            message: 'Please enter the name of the employee you would like to change.',
+            choices: employees
+        },
+        {
+            type: 'list',
+            name: 'manager',
+            message: 'Plese choose the new manager for the employee.',
+            choices: employees, 
+            when: function(answers) {
+                return (answers.name === 'None') ? false : true; 
+            }
+        }
+        //find the id of the person that has been requested to update
+    ]).then(response => {
+        let { name, manager } = response;
+        if (name === 'None') {
+            console.log('No employee updated')
+        } else {
+            // split the name into an array us it for MySQL
+            let nameArr = name.split(" ");
+            // find the emplyee in the table
+            connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+                [ nameArr[0], nameArr[1] ], function (err, results) {
+                    if (err) throw err 
+                    // set the nameID to use in the actual UPDATE
+                    nameId = results[0].id;
+                    if (manager === 'None' || manager === name) {
+                        managerId = null;
+                        updateManager(managerId, nameId)
+                    //else take the manager name selected and find the id
+                    } else {
+                        //make a manager array to hold the first and last name and split the answered name into an array
+                        let managerArr = manager.split(' ');
+                        console.log('this is the manager arr first ' + managerArr[0])
+                        // query to find the manager using the array that was made
+                        connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+                            [managerArr[0], managerArr[1]], function (err, results) {  
+                            if (err) throw err;
+                            // set the managerId to that found number to use later.
+                            managerId = results[0].id;
+                            console.log("this is the manager ID" + managerId)
+                            updateManager(managerId, nameId)
+                        })
+                    }
+                }
+            )  
+        }    
+    })
+};
+
+
 async function allRoleNames() {
     return new Promise(function (resolve, reject) {
         rolesArr = []
@@ -423,7 +494,7 @@ async function allEmployees() {
     });
 };
 
-function allDepartments() {
+async function allDepartments() {
     return new Promise(function (resolve, reject) {
         deptArr = []
         connection.query(`SELECT * FROM departments`, function(err, results) {
@@ -435,3 +506,24 @@ function allDepartments() {
         })
     });
 };
+
+function updateManager(managerId, nameId) {
+    // return new Promise(function (resolve, reject) {
+        connection.query(
+            `UPDATE employees SET manager_id = ? WHERE id = ?`,
+            [
+                managerId,
+                nameId
+            ],
+            function (err, res) {
+                if (err) throw err;
+                // console.log(res.affectedRows + " updated!\n");
+                console.log(managerId, nameId)
+                // Return back to the original set of questions.
+                listQuestions();
+            }
+        )  
+        // resolve()
+    }
+    // )
+// }
