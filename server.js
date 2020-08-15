@@ -31,7 +31,7 @@ startUp = () => {
     });
 };
 
-// list of questions are asked
+// function for asking the initial question
 listQuestions = () => {
     // 
     inquirer.prompt([
@@ -73,6 +73,7 @@ listQuestions = () => {
                 break;
             case 'Update an Employee Role':
                 updateRoleFunct();
+                break;
             default:
                 connection.end();
         }
@@ -286,42 +287,47 @@ async function addToEmployee() {
     .then(response => {
         // destructure response
         const { firstName, lastName, role, manager } = response
-        //make a manager array to hold the first and last name and split the answered name into an array
-        let managerArr = [];
-        managerArr = manager.split(' ');
-        // query to find the manager using the array that was made
-        connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
-            [managerArr[0], managerArr[1]], function (err, results) {  
-            if (err) throw err;
-            // set the managerId to that found number to use later.
-            managerId = results[0].id;
-                /// Query that takes the title name and finds the id where it matches
-                connection.query(`SELECT id FROM roles WHERE title = ?`,
-                    [ role ], function(err, results) {
-                    if (err) throw err; 
-                    // set the roleId to use in the next connection
-                    roleId = results[0].id;
-                        //Insert Query for the table using the response firstName and LastName, and the two set variables.
-                        connection.query(
-                            `INSERT INTO employees (first_name, last_name, role_id,  manager_id)
-                            VALUES (?,?,?,?)`,
-                            [
-                                firstName,
-                                lastName,
-                                roleId,
-                                managerId
-                            ],
-                            function(err, res) {
-                                if (err) throw err;
-                                console.log(res.affectedRows + ' added!\n');
-                                // Return back to the original set of questions.
-                                listQuestions();
-                            }
-                        );
+        // if they answer none make the manager id null
+        if (manager == 'None') {
+            managerId = null;
+        //else take the manager name selected and find the id
+        } else {
+            //make a manager array to hold the first and last name and split the answered name into an array
+            let managerArr = [];
+            managerArr = manager.split(' ');
+            // query to find the manager using the array that was made
+            connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+                [managerArr[0], managerArr[1]], function (err, results) {  
+                if (err) throw err;
+                // set the managerId to that found number to use later.
+                managerId = results[0].id;
+            })
+        }    
+        /// Query that takes the title name and finds the id where it matches
+        connection.query(`SELECT id FROM roles WHERE title = ?`,
+            [ role ], function(err, results) {
+            if (err) throw err; 
+            // set the roleId to use in the next connection
+            roleId = results[0].id;
+                //Insert Query for the table using the response firstName and LastName, and the two set variables.
+                connection.query(
+                    `INSERT INTO employees (first_name, last_name, role_id,  manager_id)
+                    VALUES (?,?,?,?)`,
+                    [
+                        firstName,
+                        lastName,
+                        roleId,
+                        managerId
+                    ],
+                    function(err, res) {
+                        if (err) throw err;
+                        console.log(res.affectedRows + ' added!\n');
+                        // Return back to the original set of questions.
+                        listQuestions();
                     }
-                );    
+                );
             }
-        );
+        );    
     });
 };
 
@@ -348,16 +354,21 @@ async function updateRoleFunct()  {
             choices: roles
         }
         //find the id of the person that has been requested to update
+        // need to figure out how to not continue asking questions when they say none.
     ]).then(response => {
-        // split the name into an array us it for MySQL
-      let nameArr = response.name.split(" ");
-      // find the emplyee in the table
-        connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
-            [ nameArr[0], nameArr[1] ], function (err, results) {
-                if (err) throw err;
-                // set the nameID to use in the actual UPDATE
-                nameId = results[0].id;            
-                    // Query that takes the title name and finds the id where it matches
+        if (response.name === 'None') {
+            console.log('No employee updated')
+            listQuestions();
+        } else {
+            // split the name into an array us it for MySQL
+            let nameArr = response.name.split(" ");
+            // find the emplyee in the table
+            connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+                [ nameArr[0], nameArr[1] ], function (err, results) {
+                    if (err) throw err;
+                    // set the nameID to use in the actual UPDATE
+                    nameId = results[0].id;            
+                        // Query that takes the title name and finds the id where it matches
                     connection.query(`SELECT id FROM roles WHERE title = ?`,
                         [ response.role ], function(err, results) {
                             if (err) throw err; 
@@ -379,8 +390,9 @@ async function updateRoleFunct()  {
                                 );
                         } 
                     );
-            }
-        );
+                }
+            );
+        };
     });
 };
 
@@ -400,7 +412,7 @@ async function allRoleNames() {
 
 async function allEmployees() {
     return new Promise(function (resolve, reject) {
-        employeeArr = []
+        employeeArr = ['None']
         connection.query(`SELECT * FROM employees`, function(err, results) {
             if (err) reject(err); 
             results.forEach(employee => {
