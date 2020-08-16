@@ -52,6 +52,7 @@ listQuestions = () => {
                 "Update and Employee's Manager",
                 'View Employees by Manager',
                 'View Employees by Department',
+                'Delete an Employee',
                 'Quit']
         }
     ])
@@ -87,6 +88,9 @@ listQuestions = () => {
                 break;
             case 'View Employees by Department':
                 viewEmployeesByDepartment();
+                break;
+            case 'Delete an Employee':
+                deleteEmployee();
                 break;
             default:
                 connection.end();
@@ -560,6 +564,45 @@ async function viewEmployeesByDepartment() {
     });
 };
 
+async function deleteEmployee() {
+    // arrays created for the answer choices
+    let employees = await allEmployees();
+
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'name',
+            message: 'Please enter the name of the employee you would like to delete.',
+            choices: employees
+        }
+        //find the id of the person that has been requested to update
+    ]).then(response => {
+        if (response.name === 'None') {
+            console.log('No employee deleted')
+            listQuestions();
+        } else {
+            // split the name into an array us it for MySQL
+            let nameArr = response.name.split(" ");
+            // find the emplyee in the table
+            connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+                [ nameArr[0], nameArr[1] ], function (err, results) {
+                    if (err) throw err;
+                    // set the nameID to use in the actual UPDATE
+                    nameId = results[0].id;
+                    
+                    connection.query(`DELETE FROM employees WHERE id = ?`,
+                    [ nameId ], function (err, results) {
+                        if (err) throw err;
+                        console.log(response.name + " deleted!\n");
+                        // Return back to the original set of questions.
+                        listQuestions();
+
+                    })
+                })
+        }                    
+    })
+}
+
 async function allRoleNames() {
     return new Promise(function (resolve, reject) {
         rolesArr = []
@@ -611,7 +654,6 @@ function updateManager(managerId, nameId) {
         function (err, res) {
             if (err) throw err;
             console.log(res.affectedRows + " updated!\n");
-            console.log(managerId, nameId)
             // Return back to the original set of questions.
             listQuestions();
         }
