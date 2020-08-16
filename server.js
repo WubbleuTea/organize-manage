@@ -54,6 +54,7 @@ listQuestions = () => {
                 'View Employees by Department',
                 'Delete an Employee',
                 'Delete a Role',
+                'Delete a Department',
                 'Quit']
         }
     ])
@@ -94,7 +95,10 @@ listQuestions = () => {
                 deleteEmployee();
                 break;
             case 'Delete a Role':
-                deleteEmployee();
+                deleteRole();
+                break;
+            case 'Delete a Department':
+                deleteDepartment();
                 break;
             default:
                 connection.end();
@@ -163,7 +167,7 @@ addToDept = () => {
                 if (addDepartInput) {
                     return true;
                 } else {
-                    console.log('Please enter your new department!');
+                    console.log('Please enter the name of your new department!');
                     return false;
                 }
             }
@@ -202,7 +206,7 @@ async function addToRole() {
                 if (roleNameInput) {
                     return true;
                 } else {
-                    console.log('Please enter name of this role!');
+                    console.log('Please enter name of this new role!');
                     return false;
                 }
             }
@@ -215,7 +219,7 @@ async function addToRole() {
                 if (roleSalaryInput) {
                     return true;
                 } else {
-                    console.log('Please enter salary of this role!');
+                    console.log('Please enter salary of this new role!');
                     return false;
                 }
             }
@@ -296,13 +300,13 @@ async function addToEmployee() {
         {
             type: 'list',
             name: 'role',
-            message: 'Please enter the role of this employee.',
+            message: 'Please select the role of this employee.',
             choices: roles
         },
         {
             type: 'list',
             name: 'manager',
-            message: 'Please enter the manager of this employee.',
+            message: 'Please select the manager of this employee.',
             choices: employees
         }
     ])
@@ -367,13 +371,13 @@ async function updateRoleFunct()  {
         {
             type: 'list',
             name: 'name',
-            message: 'Please enter the name of the employee you would like to change.',
+            message: 'Please select the name of the employee you would like to change.',
             choices: employees
         },
         {
             type: 'list',
             name: 'role',
-            message: 'Please enter the new role of this employee.',
+            message: 'Please select the new role of this employee.',
             choices: roles, 
             when: function(answers) {
                return (answers.name === 'None') ? false : true; 
@@ -433,13 +437,13 @@ async function updateEmployeeManager() {
         {
             type: 'list',
             name: 'name',
-            message: 'Please enter the name of the employee you would like to change.',
+            message: 'Please select the name of the employee you would like to change.',
             choices: employees
         },
         {
             type: 'list',
             name: 'manager',
-            message: 'Please choose the new manager for the employee.',
+            message: 'Please select the new manager for the employee.',
             choices: employees, 
             when: function(answers) {
                 return (answers.name === 'None') ? false : true; 
@@ -576,7 +580,7 @@ async function deleteEmployee() {
         {
             type: 'list',
             name: 'name',
-            message: 'Please enter the name of the employee you would like to delete.',
+            message: 'Please select the name of the employee you would like to delete.',
             choices: employees
         }
         //find the id of the person that has been requested to update
@@ -606,8 +610,8 @@ async function deleteEmployee() {
         }                    
     });
 };
-
-async function deleteEmployee() {
+// NEED TO FIND HOW TO DELETE PARENTS
+async function deleteRole() {
     let roleId;
     // arrays created for the answer choices
     let roles = await allRoleNames();
@@ -616,32 +620,58 @@ async function deleteEmployee() {
         {
             type: 'list',
             name: 'name',
-            message: 'Please enter the name of the role you would like to delete.',
+            message: 'Please select the name of the role you would like to delete.',
             choices: roles
         }
         //find the id of the person that has been requested to update
     ]).then(response => {
-        if (response.name === 'None') {
-            console.log('No role deleted')
-            listQuestions();
-        } else {
-            // find the role in the table and get the id
-            connection.query(`SELECT id FROM roles WHERE title = ?`,
-                [ response.name ], function (err, results) {
+        // find the role in the table and get the id
+        connection.query(`SELECT id FROM roles WHERE title = ?`,
+            [ response.name ], function (err, results) {
+                if (err) throw err;
+                // set the nameID to use in the actual UPDATE
+                roleId = results[0].id;
+                
+                connection.query(`DELETE FROM roles WHERE id = ?`,
+                [ roleId ], function (err, results) {
                     if (err) throw err;
-                    // set the nameID to use in the actual UPDATE
-                    roleId = results[0].id;
-                    
-                    connection.query(`DELETE FROM roles WHERE id = ?`,
-                    [ roleId ], function (err, results) {
-                        if (err) throw err;
-                        console.log(response.name + " deleted!\n");
-                        // Return back to the original set of questions.
-                        listQuestions();
-
-                    })
+                    console.log(response.name + " deleted!\n");
+                    // Return back to the original set of questions.
+                    listQuestions();
                 })
-        }                    
+        })                   
+    });
+};
+// NEED TO FIND HOW TO DELETE PARENTS
+async function deleteDepartment() {
+    let departmentId;
+    // arrays created for the answer choices
+    let department = await allDepartments();
+
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'name',
+            message: 'Please select the name of the department you would like to delete.',
+            choices: department
+        }
+        //find the id of the person that has been requested to update
+    ]).then(response => {
+        // find the role in the table and get the id
+        connection.query(`SELECT id FROM departments WHERE department_name = ?`,
+            [ response.name ], function (err, results) {
+                if (err) throw err;
+                // set the nameID to use in the actual UPDATE
+                departmentId = results[0].id;
+                
+                connection.query(`DELETE FROM departments WHERE id = ?`,
+                [ departmentId ], function (err, results) {
+                    if (err) throw err;
+                    console.log(response.name + " deleted!\n");
+                    // Return back to the original set of questions.
+                    listQuestions();
+                })
+        })                 
     });
 };
 
