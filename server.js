@@ -475,12 +475,13 @@ async function updateEmployeeManager() {
     })
 };
 
+// View all employees by manager
 async function viewEmployeesByManager() {
     let managerId;
     // arrays created for the answer choices
     let employees = await allEmployees();
 
-    // Asks the question of what to change
+    // Asks the question of what manager to view
     inquirer.prompt([
         {
             type: 'list',
@@ -488,7 +489,7 @@ async function viewEmployeesByManager() {
             message: 'Please choose the manager to view their employees.',
             choices: employees, 
         }
-        //find the id of the person that has been requested to update
+    //find the id of the manager that has been requested
     ]).then(response => {
         let { manager } = response;
         if (manager === 'None') {
@@ -504,24 +505,27 @@ async function viewEmployeesByManager() {
                 // set the managerId to that found number to use later.
                 managerId = results[0].id;
                 console.log(`\n========${manager}========\n`)
-                connection.query(`SELECT id, first_name, last_name FROM employees WHERE manager_id = ? ORDER by id DESC`,
-                    [managerId], function (err, results) {  
+                // return the table showing employees that are managed by the selected manager
+                connection.query(`SELECT id, first_name, last_name FROM employees WHERE manager_id = ? ORDER by id ASC`,
+                    [ managerId ], function (err, results) {  
                         if (err) throw err;
-                        console.table(results); 
+                        console.table(results);
+                        // Return back to the original set of questions. 
                         listQuestions();
                     }
                 )    
             })
         }
-    })
+    });
 };
 
-function viewEmployeesByDepartment() {
+// view all employees by a department
+async function viewEmployeesByDepartment() {
     let departId;
     // arrays created for the answer choices
     let departments = await allDepartments();
 
-    // Asks the question of what to change
+    // Asks the question of department to view
     inquirer.prompt([
         {
             type: 'list',
@@ -529,26 +533,32 @@ function viewEmployeesByDepartment() {
             message: 'What is the name of the department for this role?',
             choices: departments
         }
-        //find the id of the person that has been requested to update
+    // find the id of the department that has been requested
     ]).then(response => {
         let { depart } = response;
-        // query to find the manager using the array that was made
+        // query to find the department id
         connection.query(`SELECT id FROM departments WHERE department_name = ?`,
             [ depart ], function (err, results) {  
             if (err) throw err;
-            // set the managerId to that found number to use later.
+            // set the department id to that found number to use later
             departId = results[0].id;
-            console.log(`\n========${depart}========\n`)
-            connection.query(`SELECT id, first_name, last_name, FROM employees WHERE department_id = ? ORDER by id DESC`,
-                [departId], function (err, results) {  
-                    if (err) throw err;
-                    console.table(results); 
-                    listQuestions();
-                }
+            console.log(`\n=======================${depart}=======================\n`)
+            // Show the employee's in chosen department
+            connection.query(`SELECT employees.id, first_name, last_name, roles.title FROM employees
+                INNER JOIN roles
+                ON employees.role_id = roles.id 
+                WHERE department_id = ? 
+                ORDER by employees.id ASC`,
+                    [ departId ], function (err, results) {  
+                        if (err) throw err;
+                        console.table(results); 
+                        // Return back to the original set of questions.
+                        listQuestions();
+                    }
             )    
-        })
-    })
-}
+        });
+    });
+};
 
 async function allRoleNames() {
     return new Promise(function (resolve, reject) {
@@ -589,7 +599,9 @@ async function allDepartments() {
     });
 };
 
+// function to update manager 
 function updateManager(managerId, nameId) {
+    // update manager
     connection.query(
         `UPDATE employees SET manager_id = ? WHERE id = ?`,
         [
