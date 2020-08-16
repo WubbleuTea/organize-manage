@@ -49,7 +49,8 @@ listQuestions = () => {
                 'Add a Role', 
                 'Add an Employee', 
                 'Update an Employee Role',
-                "Update and Employee's Manager", 
+                "Update and Employee's Manager",
+                'View Employees by Manager', 
                 'Quit']
         }
     ])
@@ -79,6 +80,9 @@ listQuestions = () => {
                 break;
             case "Update and Employee's Manager":
                 updateEmployeeManager();
+                break;
+            case 'View Employees by Manager':
+                viewEmployeesByManager();
                 break;
             default:
                 connection.end();
@@ -423,7 +427,7 @@ async function updateEmployeeManager() {
         {
             type: 'list',
             name: 'manager',
-            message: 'Plese choose the new manager for the employee.',
+            message: 'Please choose the new manager for the employee.',
             choices: employees, 
             when: function(answers) {
                 return (answers.name === 'None') ? false : true; 
@@ -467,6 +471,48 @@ async function updateEmployeeManager() {
     })
 };
 
+async function viewEmployeesByManager() {
+    let managerId;
+    // arrays created for the answer choices
+    let employees = await allEmployees();
+
+    // Asks the question of what to change
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'manager',
+            message: 'Please choose the manager to view their employees.',
+            choices: employees, 
+        }
+        //find the id of the person that has been requested to update
+    ]).then(response => {
+        let { manager } = response;
+        if (manager === 'None') {
+            console.log('No Manager picked')
+            listQuestions();
+        } else {
+            //make a manager array to hold the first and last name and split the answered name into an array
+            let managerArr = manager.split(' ');
+            // query to find the manager using the array that was made
+            connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
+                [managerArr[0], managerArr[1]], function (err, results) {  
+                if (err) throw err;
+                // set the managerId to that found number to use later.
+                managerId = results[0].id;
+                console.log(`\n========${manager}========\n`)
+                connection.query(`SELECT id, first_name, last_name FROM employees WHERE manager_id = ? ORDER by id DESC`,
+                    [managerId], function (err, results) {  
+                        if (err) throw err;
+                        console.table(results); 
+                        listQuestions();
+                    }
+                )    
+            })
+           
+        }
+    })
+  
+};
 
 async function allRoleNames() {
     return new Promise(function (resolve, reject) {
