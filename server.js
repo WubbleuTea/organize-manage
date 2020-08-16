@@ -50,7 +50,8 @@ listQuestions = () => {
                 'Add an Employee', 
                 'Update an Employee Role',
                 "Update and Employee's Manager",
-                'View Employees by Manager', 
+                'View Employees by Manager',
+                'View Employees by Department',
                 'Quit']
         }
     ])
@@ -83,6 +84,9 @@ listQuestions = () => {
                 break;
             case 'View Employees by Manager':
                 viewEmployeesByManager();
+                break;
+            case 'View Employees by Department':
+                viewEmployeesByDepartment();
                 break;
             default:
                 connection.end();
@@ -508,11 +512,43 @@ async function viewEmployeesByManager() {
                     }
                 )    
             })
-           
         }
     })
-  
 };
+
+function viewEmployeesByDepartment() {
+    let departId;
+    // arrays created for the answer choices
+    let departments = await allDepartments();
+
+    // Asks the question of what to change
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'depart',
+            message: 'What is the name of the department for this role?',
+            choices: departments
+        }
+        //find the id of the person that has been requested to update
+    ]).then(response => {
+        let { depart } = response;
+        // query to find the manager using the array that was made
+        connection.query(`SELECT id FROM departments WHERE department_name = ?`,
+            [ depart ], function (err, results) {  
+            if (err) throw err;
+            // set the managerId to that found number to use later.
+            departId = results[0].id;
+            console.log(`\n========${depart}========\n`)
+            connection.query(`SELECT id, first_name, last_name, FROM employees WHERE department_id = ? ORDER by id DESC`,
+                [departId], function (err, results) {  
+                    if (err) throw err;
+                    console.table(results); 
+                    listQuestions();
+                }
+            )    
+        })
+    })
+}
 
 async function allRoleNames() {
     return new Promise(function (resolve, reject) {
