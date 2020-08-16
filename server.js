@@ -53,6 +53,7 @@ listQuestions = () => {
                 'View Employees by Manager',
                 'View Employees by Department',
                 'Delete an Employee',
+                'Delete a Role',
                 'Quit']
         }
     ])
@@ -90,6 +91,9 @@ listQuestions = () => {
                 viewEmployeesByDepartment();
                 break;
             case 'Delete an Employee':
+                deleteEmployee();
+                break;
+            case 'Delete a Role':
                 deleteEmployee();
                 break;
             default:
@@ -383,7 +387,7 @@ async function updateRoleFunct()  {
         } else {
             // split the name into an array us it for MySQL
             let nameArr = response.name.split(" ");
-            // find the emplyee in the table
+            // find the employee in the table
             connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
                 [ nameArr[0], nameArr[1] ], function (err, results) {
                     if (err) throw err;
@@ -449,7 +453,7 @@ async function updateEmployeeManager() {
         } else {
             // split the name into an array us it for MySQL
             let nameArr = name.split(" ");
-            // find the emplyee in the table
+            // find the employee in the table
             connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
                 [ nameArr[0], nameArr[1] ], function (err, results) {
                     if (err) throw err 
@@ -583,7 +587,7 @@ async function deleteEmployee() {
         } else {
             // split the name into an array us it for MySQL
             let nameArr = response.name.split(" ");
-            // find the emplyee in the table
+            // find the employee in the table
             connection.query(`SELECT id FROM employees WHERE first_name = ? AND last_name = ?`,
                 [ nameArr[0], nameArr[1] ], function (err, results) {
                     if (err) throw err;
@@ -600,8 +604,46 @@ async function deleteEmployee() {
                     })
                 })
         }                    
-    })
-}
+    });
+};
+
+async function deleteEmployee() {
+    let roleId;
+    // arrays created for the answer choices
+    let roles = await allRoleNames();
+
+    inquirer.prompt([
+        {
+            type: 'list',
+            name: 'name',
+            message: 'Please enter the name of the role you would like to delete.',
+            choices: roles
+        }
+        //find the id of the person that has been requested to update
+    ]).then(response => {
+        if (response.name === 'None') {
+            console.log('No role deleted')
+            listQuestions();
+        } else {
+            // find the role in the table and get the id
+            connection.query(`SELECT id FROM roles WHERE title = ?`,
+                [ response.name ], function (err, results) {
+                    if (err) throw err;
+                    // set the nameID to use in the actual UPDATE
+                    roleId = results[0].id;
+                    
+                    connection.query(`DELETE FROM roles WHERE id = ?`,
+                    [ roleId ], function (err, results) {
+                        if (err) throw err;
+                        console.log(response.name + " deleted!\n");
+                        // Return back to the original set of questions.
+                        listQuestions();
+
+                    })
+                })
+        }                    
+    });
+};
 
 async function allRoleNames() {
     return new Promise(function (resolve, reject) {
