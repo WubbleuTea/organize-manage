@@ -642,6 +642,7 @@ async function deleteRole() {
         })                   
     });
 };
+
 // NEED TO FIND HOW TO DELETE PARENTS
 async function deleteDepartment() {
     let departmentId;
